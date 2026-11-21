@@ -189,7 +189,7 @@ function App() {
           <button className="menu-backdrop" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú" />
           <aside className="menu-sidebar" role="dialog" aria-modal="true" aria-labelledby="menu-title">
             <div className="options-sidebar-heading">
-              <div><p className="eyebrow">VIDAS DE SANTOS</p><h2 id="menu-title">Menú</h2></div>
+              <div><p className="eyebrow">VESTIGIA LUCIS</p><h2 id="menu-title">Menú</h2></div>
               <button className="options-close" onClick={() => setMenuOpen(false)} aria-label="Cerrar menú">×</button>
             </div>
             <button className="options-toggle menu-options-button" onClick={() => { setMenuOpen(false); setOptionsOpen(true); }}>
@@ -206,7 +206,7 @@ function App() {
               <span /><span /><span />
             </button>
             <a className="brand" href="#" onClick={() => setSelected(null)} aria-label="Inicio">
-              <span className="brand-mark">✦</span><span>Vidas de <b>Santos</b></span>
+              <span className="brand-mark" aria-hidden="true">✦</span><span className="brand-wordmark">Vestigia <b>Lucis</b></span>
             </a>
           </div>
           <nav className="topbar-actions" aria-label="Administración">
@@ -230,7 +230,7 @@ function App() {
                 <label className={`theme-choice ${theme === "classic" ? "selected" : ""}`}>
                   <input type="radio" name="theme" value="classic" checked={theme === "classic"} onChange={() => setTheme("classic")} />
                   <span className="theme-preview theme-preview-classic" aria-hidden="true"><span>✦</span><i /></span>
-                  <span className="theme-choice-copy"><b>Clásico</b><small>El estilo original, cálido y tranquilo.</small></span>
+                  <span className="theme-choice-copy"><b>Estelar</b><small>Un cielo tranquilo con luces doradas.</small></span>
                   <span className="theme-check" aria-hidden="true">{theme === "classic" ? "✓" : ""}</span>
                 </label>
                 <label className={`theme-choice ${theme === "xp" ? "selected" : ""}`}>
@@ -254,11 +254,25 @@ function App() {
       <main>
         <section className="hero">
           <div className="hero-copy">
-            <p className="eyebrow">HISTORIAS QUE INSPIRAN</p>
-            <h1>Conoce sus vidas.<br /><em>Encuentra inspiración.</em></h1>
-            <p className="hero-intro">Un espacio para descubrir las historias, los milagros y el legado de hombres y mujeres que dejaron huella.</p>
+            <p className="eyebrow hero-eyebrow"><span aria-hidden="true">✦</span> RELATOS QUE ILUMINAN</p>
+            <h1>Vestigia <em>Lucis</em></h1>
+            <p className="hero-tagline">Huellas de luz, historias que inspiran.</p>
+            <p className="hero-intro">Descubre vidas extraordinarias, milagros y valores en relatos para imaginar, aprender y compartir en familia.</p>
+            <a className="hero-cta" href="#glosario">Explorar historias <span aria-hidden="true">↓</span></a>
+            <p className="hero-family-note"><span aria-hidden="true">✦</span> Para pequeños y grandes exploradores</p>
           </div>
-          <div className="hero-symbol" aria-hidden="true">✦</div>
+          <div className="hero-art" role="img" aria-label="Un cielo nocturno con estrellas y una luna creciente">
+            <span className="hero-moon" />
+            <span className="hero-star hero-star-a">✦</span>
+            <span className="hero-star hero-star-b">✦</span>
+            <span className="hero-star hero-star-c">✦</span>
+            <span className="hero-star hero-star-d">✦</span>
+            <span className="hero-star hero-star-e">✦</span>
+            <span className="hero-star hero-star-f">✦</span>
+            <div className="hero-hill hero-hill-back" />
+            <div className="hero-hill hero-hill-front" />
+            <div className="hero-art-label"><span aria-hidden="true">✦</span><p><strong>Cada vida</strong><small>una estrella que guía</small></p></div>
+          </div>
         </section>
 
         {adminOpen && (
@@ -329,7 +343,7 @@ function App() {
         {selected ? (
           <SaintDetail saint={selected} onBack={() => setSelected(null)} />
         ) : (
-          <section className="directory">
+          <section className="directory" id="glosario">
             <div className="section-heading">
               <div><p className="eyebrow">EL GLOSARIO</p><h2>Historias para descubrir</h2></div>
               <span className="result-count">{loading ? "…" : `${saints.length} ${saints.length === 1 ? "historia" : "historias"}`}</span>
@@ -363,7 +377,7 @@ function App() {
           </section>
         )}
       </main>
-      <footer><span className="brand-mark">✦</span> Vidas de Santos <span className="footer-note">Un glosario para aprender y recordar</span></footer>
+      <footer><span className="brand-mark" aria-hidden="true">✦</span><strong>Vestigia Lucis</strong><span className="footer-note">Historias para compartir en familia</span></footer>
       </div>
     </div>
   );

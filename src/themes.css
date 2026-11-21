@@ -20,7 +20,7 @@
 .theme-preview{position:relative;height:51px;overflow:hidden;border:1px solid #ffffffa0;border-radius:5px;box-shadow:0 2px 6px #2030401c}
 .theme-preview span{position:absolute;top:8px;left:8px;font-size:17px}
 .theme-preview i{position:absolute;left:7px;right:7px;bottom:7px;height:6px;border-radius:4px;background:#ffffffa8}
-.theme-preview-classic{background:linear-gradient(145deg,#f1ede4,#d6c9ac);color:#92703c}
+.theme-preview-classic{background:linear-gradient(145deg,#18254d,#405c91);color:#ffda7a}
 .theme-preview-xp{background:linear-gradient(145deg,#79c9f3,#2579c9 72%,#1655ad);color:#fff}
 .theme-preview-xp i{background:linear-gradient(90deg,#7cc849,#b7e864)}
 .theme-preview-vista{background:linear-gradient(145deg,#d9f4ff,#69b8ec 52%,#2675bd);color:#fff}
