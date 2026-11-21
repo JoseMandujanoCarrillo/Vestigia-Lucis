@@ -34,14 +34,17 @@ app.use(cors({
 app.use(express.json({ limit: "1mb" }));
 app.use("/uploads", express.static(path.resolve(__dirname, "../uploads"), { dotfiles: "deny", index: false }));
 
-app.get("/api/health", async (_req, res, next) => {
+const healthCheck = async (_req, res, next) => {
   try {
     await pool.query("SELECT 1");
     res.json({ status: "ok", database: "connected" });
   } catch (error) {
     next(error);
   }
-});
+};
+
+app.get("/", healthCheck);
+app.get("/api/health", healthCheck);
 
 app.post("/api/auth/login", async (req, res, next) => {
   try {
