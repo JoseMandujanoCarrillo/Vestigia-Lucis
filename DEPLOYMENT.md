@@ -20,7 +20,7 @@ Este repositorio usa tres ramas:
    - `JWT_SECRET`: secreto aleatorio de al menos 32 caracteres.
    - `ADMIN_EMAIL`: correo del administrador.
    - `ADMIN_PASSWORD`: contraseña fuerte del administrador.
-   - `FRONTEND_ORIGIN`: URL exacta de Vercel. Para varios dominios, sepáralos por comas.
+   - `FRONTEND_ORIGIN`: `https://vestigia-lucis.vercel.app`. Para varios dominios, sepáralos por comas.
 5. Abre el Shell de Render y ejecuta `npm run db:init`, seguido de `npm run admin:create`.
 6. Verifica `https://TU-SERVICIO.onrender.com/api/health`.
 
@@ -28,12 +28,12 @@ El sistema de archivos de Render no es persistente. Las imágenes administrativa
 
 ## Vercel
 
-1. Importa el repositorio en Vercel y selecciona la rama `frontend`.
+1. Importa el repositorio en Vercel y selecciona la rama `frontend`. Si usas `main`, establece Root Directory en `frontend`.
 2. Configura:
    - Framework Preset: `Vite`
-   - Root Directory: `/`
+   - Root Directory: `/` en la rama `frontend`, o `frontend` en `main`.
    - Build Command: `npm run build`
    - Output Directory: `dist`
-3. Añade `VITE_API_URL=https://TU-SERVICIO.onrender.com/api`.
-4. Despliega y copia la URL de Vercel.
-5. Actualiza `FRONTEND_ORIGIN` en Render con esa URL y vuelve a desplegar el API.
+3. La URL del API está configurada en `frontend/.env.production` como `https://vestigia-lucis.onrender.com/api`.
+4. Despliega o vuelve a desplegar el frontend.
+5. Si cambias el dominio de Vercel, actualiza `FRONTEND_ORIGIN` en Render con la URL nueva y vuelve a desplegar el API.
