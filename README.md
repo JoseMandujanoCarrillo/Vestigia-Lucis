@@ -8,8 +8,4 @@ Aplicación React/Vite para Vestigia Lucis.
 - Build: `npm run build`
 - Output: `dist`
 
-Configura esta variable de entorno:
-
-```text
-VITE_API_URL=https://TU-SERVICIO.onrender.com/api
-```
+La API de producción ya está configurada en `.env.production`. Vercel la incluirá al compilar.
