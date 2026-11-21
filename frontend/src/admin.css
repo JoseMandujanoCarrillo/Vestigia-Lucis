@@ -1,0 +1,3 @@
+.admin-panel select{width:100%;border:1px solid var(--line);border-radius:3px;padding:10px;background:white;color:var(--ink);outline-color:#aa8a52;font-size:12px}
+.admin-selector{max-width:440px;margin-bottom:20px}
+.button-danger{background:transparent;color:#9e4a43;border:1px solid #dcbab6;border-radius:3px;padding:10px 15px;font-size:12px}
