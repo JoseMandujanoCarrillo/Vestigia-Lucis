@@ -9,14 +9,14 @@ Aplicación separada en una página React/Vite (`frontend/`) y un API Express (`
 
 ## Configuración
 
-1. Copia `backend/.env.example` a `backend/.env` y configura `DATABASE_URL`, `JWT_SECRET` (mínimo 32 caracteres), `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 12 caracteres). No publiques el archivo `.env`.
+1. Copia `backend/.env.example` a `backend/.env` y configura `DATABASE_URL`, `JWT_SECRET` (mínimo 32 caracteres), `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 12 caracteres). Para guardar imágenes fuera del servidor, también configura `CLOUDINARY_URL`. No publiques el archivo `.env`.
 2. Desde `backend/`, instala dependencias con `npm install`.
 3. Inicializa las tablas con `npm run db:init`.
 4. Crea o actualiza la cuenta administradora con `npm run admin:create`.
 5. Inicia el API con `npm run dev`.
 6. Copia `frontend/.env.example` a `frontend/.env`, instala dependencias desde `frontend/` con `npm install` e inicia la web con `npm run dev`.
 
-La página se abre por defecto en `http://localhost:5173`; el API en `http://localhost:4000`. Las imágenes se guardan en `backend/uploads/`; en producción, configura almacenamiento persistente o un servicio de objetos antes de desplegar.
+La página se abre por defecto en `http://localhost:5173`; el API en `http://localhost:4000`. Sin `CLOUDINARY_URL`, las imágenes se guardan en `backend/uploads/` (útil en desarrollo). En Render, configura `CLOUDINARY_URL` como variable privada para guardar las imágenes en Cloudinary; la base de datos almacenará sus URL seguras. Las imágenes locales que ya estaban guardadas no se migran automáticamente: vuelve a subirlas desde Administración después de configurar Cloudinary.
 
 ## API
 
