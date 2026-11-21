@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API = (import.meta.env.VITE_API_URL || "http://localhost:4000/api").replace(/\/$/, "");
+const API = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? "https://vestigia-lucis.onrender.com/api" : "http://localhost:4000/api")
+).replace(/\/$/, "");
 const API_ORIGIN = new URL(API).origin;
 const mediaUrl = (url) => url?.startsWith("/") ? `${API_ORIGIN}${url}` : url;
 const emptyForm = {
