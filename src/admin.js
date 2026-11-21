@@ -4,20 +4,72 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { v2 as cloudinary } from "cloudinary";
 import { pool } from "./db.js";
 import { requireAuth } from "./auth.js";
 import { parseMultiline, parseTags, slugify, validYouTubeUrl } from "./helpers.js";
 
 const router = Router();
 const uploadDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../uploads");
-await mkdir(uploadDirectory, { recursive: true });
+function cloudinaryConfigFromUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("CLOUDINARY_URL no tiene un formato válido.");
+  }
+  if (url.protocol !== "cloudinary:" || !url.hostname || !url.username || !url.password) {
+    throw new Error("CLOUDINARY_URL debe incluir API key, API secret y cloud name.");
+  }
+  return {
+    cloud_name: url.hostname,
+    api_key: decodeURIComponent(url.username),
+    api_secret: decodeURIComponent(url.password),
+    secure: true
+  };
+}
 
-const storage = multer.diskStorage({
+const cloudinaryConfigured = Boolean(process.env.CLOUDINARY_URL);
+if (cloudinaryConfigured) {
+  cloudinary.config(cloudinaryConfigFromUrl(process.env.CLOUDINARY_URL));
+} else {
+  await mkdir(uploadDirectory, { recursive: true });
+}
+
+const localStorage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, uploadDirectory),
   filename: (_req, file, callback) => callback(null, `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`)
 });
+const cloudinaryStorage = {
+  _handleFile(_req, file, callback) {
+    let completed = false;
+    const finish = (error, result) => {
+      if (completed) return;
+      completed = true;
+      if (error) return callback(error);
+      if (!result?.secure_url || !result.public_id) {
+        return callback(new Error("Cloudinary no devolvió la URL de la imagen."));
+      }
+      callback(null, { path: result.secure_url, filename: result.public_id, size: result.bytes });
+    };
+    const stream = cloudinary.uploader.upload_stream({
+      folder: "vestigia-lucis/saints",
+      public_id: randomUUID(),
+      resource_type: "image"
+    }, finish);
+    file.stream.on("error", (error) => stream.destroy(error));
+    stream.on("error", (error) => finish(error));
+    file.stream.pipe(stream);
+  },
+  _removeFile(_req, file, callback) {
+    if (!file.filename) return callback(null);
+    cloudinary.uploader.destroy(file.filename, { resource_type: "image" })
+      .then(() => callback(null))
+      .catch(callback);
+  }
+};
 const upload = multer({
-  storage,
+  storage: cloudinaryConfigured ? cloudinaryStorage : localStorage,
   limits: { fileSize: 5 * 1024 * 1024, files: 3 },
   fileFilter: (_req, file, callback) => {
     const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -30,7 +82,13 @@ const images = upload.fields([
 
 router.use(requireAuth);
 router.use((req, res, next) => images(req, res, (error) => {
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error("Error al guardar imágenes:", error.message);
+    const badRequest = error instanceof multer.MulterError || error.message.startsWith("Solo se permiten");
+    return res.status(badRequest ? 400 : 502).json({
+      error: badRequest ? error.message : "No se pudieron guardar las imágenes en Cloudinary."
+    });
+  }
   next();
 }));
 
@@ -60,9 +118,11 @@ function contentFromRequest(body, files, existing = {}) {
   if (!name || !shortDescription || !originPlace) throw Object.assign(new Error("Nombre, descripción breve y procedencia son obligatorios."), { status: 400 });
   if (!validYouTubeUrl(youtubeUrl)) throw Object.assign(new Error("La URL debe corresponder a YouTube."), { status: 400 });
 
-  const imageUrls = [1, 2, 3].map((number) =>
-    files?.[`image_${number}`]?.[0] ? `/uploads/${files[`image_${number}`][0].filename}` : existing[`image_${number}_url`] || null
-  );
+  const imageUrls = [1, 2, 3].map((number) => {
+    const file = files?.[`image_${number}`]?.[0];
+    if (!file) return existing[`image_${number}_url`] || null;
+    return cloudinaryConfigured ? file.path : `/uploads/${file.filename}`;
+  });
   const published = body.is_published === undefined ? true : body.is_published === "true" || body.is_published === true;
   if (published && imageUrls.some((url) => !url)) throw Object.assign(new Error("Para publicar se requieren las tres imágenes."), { status: 400 });
 
