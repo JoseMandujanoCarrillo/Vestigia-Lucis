@@ -206,7 +206,7 @@ function App() {
               <span /><span /><span />
             </button>
             <a className="brand" href="#" onClick={() => setSelected(null)} aria-label="Inicio">
-              <span className="brand-mark" aria-hidden="true">✦</span><span className="brand-wordmark">Vestigia <b>Lucis</b></span>
+              <span className="brand-mark" aria-hidden="true">✝</span><span className="brand-wordmark">Vestigia <b>Lucis</b></span>
             </a>
           </div>
           <nav className="topbar-actions" aria-label="Administración">
@@ -377,7 +377,7 @@ function App() {
           </section>
         )}
       </main>
-      <footer><span className="brand-mark" aria-hidden="true">✦</span><strong>Vestigia Lucis</strong><span className="footer-note">Historias para compartir en familia</span></footer>
+      <footer><span className="brand-mark" aria-hidden="true">✝</span><strong>Vestigia Lucis</strong><span className="footer-note">Historias para compartir en familia</span></footer>
       </div>
     </div>
   );
