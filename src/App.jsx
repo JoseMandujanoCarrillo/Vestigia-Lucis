@@ -33,6 +33,9 @@ function App() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("saints-theme") || "classic");
   const [token, setToken] = useState(() => localStorage.getItem("saints-admin-token") || "");
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [adminAccounts, setAdminAccounts] = useState([]);
+  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
   const [adminSaints, setAdminSaints] = useState([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
@@ -86,14 +89,45 @@ function App() {
     }
   }
 
+  async function loadAdminAccounts() {
+    if (!token || !currentAdmin?.is_superadmin) return;
+    try {
+      const data = await request("/admin/admins", {}, token);
+      setAdminAccounts(data.admins);
+    } catch (e) {
+      setAdminError(e.message);
+    }
+  }
+
+  useEffect(() => {
+    if (!token) {
+      setCurrentAdmin(null);
+      setAdminAccounts([]);
+      return undefined;
+    }
+    let active = true;
+    request("/auth/me", {}, token).then((data) => {
+      if (active) setCurrentAdmin(data.admin);
+    }).catch((e) => {
+      if (!active) return;
+      localStorage.removeItem("saints-admin-token");
+      setToken("");
+      setAdminError(e.message);
+    });
+    return () => { active = false; };
+  }, [token]);
+
   useEffect(() => {
     const timer = setTimeout(loadSaints, 250);
     return () => clearTimeout(timer);
   }, [query]);
 
   useEffect(() => {
-    if (adminOpen && token) loadAdminSaints();
-  }, [adminOpen, token]);
+    if (adminOpen && token) {
+      loadAdminSaints();
+      loadAdminAccounts();
+    }
+  }, [adminOpen, token, currentAdmin]);
 
   async function login(event) {
     event.preventDefault();
@@ -104,8 +138,25 @@ function App() {
         body: JSON.stringify({ email: adminEmail, password: adminPassword })
       });
       localStorage.setItem("saints-admin-token", data.token);
+      setCurrentAdmin(data.admin);
       setToken(data.token);
       setAdminPassword("");
+    } catch (e) {
+      setAdminError(e.message);
+    }
+  }
+
+  async function createAdmin(event) {
+    event.preventDefault();
+    setAdminError("");
+    try {
+      await request("/admin/admins", {
+        method: "POST",
+        body: JSON.stringify(newAdmin)
+      }, token);
+      setNewAdmin({ name: "", email: "", password: "" });
+      setNotice("Cuenta administradora creada correctamente.");
+      await loadAdminAccounts();
     } catch (e) {
       setAdminError(e.message);
     }
@@ -178,6 +229,8 @@ function App() {
   function logout() {
     localStorage.removeItem("saints-admin-token");
     setToken("");
+    setCurrentAdmin(null);
+    setAdminAccounts([]);
     setForm(emptyForm);
     setEditingId("");
   }
@@ -292,9 +345,23 @@ function App() {
             ) : (
               <div>
                 <div className="admin-heading">
-                  <div><p className="eyebrow">PANEL DE CONTENIDO</p><h2>{editingId ? "Editar santo" : "Agregar un santo"}</h2></div>
+                  <div><p className="eyebrow">PANEL DE CONTENIDO</p><h2>{editingId ? "Editar santo" : "Agregar un santo"}</h2><p className="admin-welcome">Sesión: {currentAdmin?.name || currentAdmin?.email}</p></div>
                   <button className="button-quiet" onClick={logout}>Cerrar sesión</button>
                 </div>
+                {currentAdmin?.is_superadmin && (
+                  <section className="admin-accounts">
+                    <div><p className="eyebrow">ACCESO AL PANEL</p><h3>Administradores</h3></div>
+                    <ul className="admin-account-list">
+                      {adminAccounts.map((account) => <li key={account.id}><strong>{account.name}</strong><span>{account.email}</span></li>)}
+                    </ul>
+                    <form className="admin-account-form" onSubmit={createAdmin}>
+                      <label>Nombre<input value={newAdmin.name} onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })} required maxLength="120" /></label>
+                      <label>Correo electrónico<input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} required /></label>
+                      <label>Contraseña (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={newAdmin.password} onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })} minLength="12" required /></label>
+                      <button className="button-primary" type="submit">Crear cuenta</button>
+                    </form>
+                  </section>
+                )}
                 <label className="admin-selector">Editar un santo existente
                   <select value={editingId} onChange={(e) => {
                     const saint = adminSaints.find((item) => String(item.id) === e.target.value);
@@ -370,6 +437,7 @@ function App() {
                       </div>
                     </button>
                     {token && <div className="card-admin"><button onClick={() => { setAdminOpen(true); startEditing(saint); }}>Editar</button><button onClick={() => deleteSaint(saint)}>Eliminar</button></div>}
+                    <ContributionSummary contributors={saint.contributors} />
                   </article>
                 ))}
               </div>
@@ -391,6 +459,7 @@ function SaintDetail({ saint, onBack }) {
     <article className="detail-view">
       <button className="back-link" onClick={onBack}>← Volver al glosario</button>
       <div className="detail-header"><p className="eyebrow">{saint.origin_place}{saint.country ? ` · ${saint.country}` : ""}</p><h2>{saint.name}</h2><p>{saint.short_description}</p></div>
+      <ContributionSummary contributors={saint.contributors} />
       {images.length > 0 && <div className="gallery">
         <img className="gallery-main" src={images[activeImage]} alt={`${saint.name}, imagen ${activeImage + 1}`} />
         <div className="gallery-thumbs">{images.map((image, index) => <button key={image} className={index === activeImage ? "active" : ""} onClick={() => setActiveImage(index)} aria-label={`Ver imagen ${index + 1}`}><img src={image} alt="" /></button>)}</div>
@@ -412,6 +481,18 @@ function SaintDetail({ saint, onBack }) {
       </div>
       {videoId && <section className="video-section"><p className="eyebrow">PARA CONOCER MÁS</p><h3>La historia en video</h3><div className="video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${videoId}`} title={`Video sobre ${saint.name}`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /></div></section>}
     </article>
+  );
+}
+
+function ContributionSummary({ contributors = [] }) {
+  if (!contributors.length) return null;
+  const maximum = Number(contributors[0].contributions);
+  const leading = contributors.filter((contributor) => Number(contributor.contributions) === maximum);
+  return (
+    <div className="contribution-summary">
+      <p><strong>Mayor aporte:</strong> {leading.map((contributor) => contributor.name).join(", ")} ({maximum} {maximum === 1 ? "aporte" : "aportes"})</p>
+      <p><strong>Colaboraron:</strong> {contributors.map((contributor) => `${contributor.name} (${contributor.contributions})`).join(", ")}</p>
+    </div>
   );
 }
 
