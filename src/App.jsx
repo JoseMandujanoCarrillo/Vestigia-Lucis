@@ -231,7 +231,7 @@ function App() {
             </button>
             {token && currentAdmin && (
               <button className="options-toggle menu-options-button" onClick={() => { setMenuOpen(false); setAdminOpen(false); setAccountPage(true); }}>
-                <span aria-hidden="true">♙</span> {currentAdmin.is_superadmin ? "Mi cuenta y usuarios" : "Mi cuenta"}
+                <span aria-hidden="true">♙</span> Mi cuenta
               </button>
             )}
           </aside>
@@ -467,7 +467,8 @@ function SaintDetail({ saint, onBack }) {
 
 function AccountPage({ token, currentAdmin, onBack, onError }) {
   const [admins, setAdmins] = useState([]);
-  const [loading, setLoading] = useState(Boolean(currentAdmin.is_superadmin));
+  const [loading, setLoading] = useState(false);
+  const [canManageAdmins, setCanManageAdmins] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", confirm_password: "" });
@@ -484,13 +485,21 @@ function AccountPage({ token, currentAdmin, onBack, onError }) {
   }
 
   async function loadAdmins() {
-    if (!currentAdmin.is_superadmin) return;
     setLoading(true);
     try {
       const data = await request("/admin/admins", {}, token);
       setAdmins(data.admins);
+      setCanManageAdmins(true);
     } catch (requestError) {
-      handleAccountError(requestError);
+      if (requestError.status === 403) {
+        setCanManageAdmins(false);
+        setAdmins([]);
+        setError("Esta cuenta no tiene permisos de superadministrador. Si ya activaste ese rol en la base de datos, cierra sesión, vuelve a iniciar y confirma que Render esté conectado a esa misma base.");
+      } else if (requestError.status === 404) {
+        setError("La gestión de administradores aún no está disponible en el backend. Despliega la rama backend con el cambio más reciente en Render.");
+      } else {
+        handleAccountError(requestError);
+      }
     } finally {
       setLoading(false);
     }
@@ -498,7 +507,7 @@ function AccountPage({ token, currentAdmin, onBack, onError }) {
 
   useEffect(() => {
     loadAdmins();
-  }, [token, currentAdmin.is_superadmin]);
+  }, [token]);
 
   function beginEdit(admin) {
     setEditingId(String(admin.id));
@@ -575,7 +584,7 @@ function AccountPage({ token, currentAdmin, onBack, onError }) {
           <button className="button-primary" type="submit">Cambiar contraseña</button>
         </form>
       </section>
-      {currentAdmin.is_superadmin && (
+      {canManageAdmins && (
         <section className="admin-accounts">
           <div><p className="eyebrow">GESTIÓN DE ACCESOS</p><h2>Usuarios administradores</h2><p className="account-page-help">Solo la cuenta superadministradora puede administrar estos usuarios.</p></div>
           <form className="admin-account-form" onSubmit={saveAdmin}>
