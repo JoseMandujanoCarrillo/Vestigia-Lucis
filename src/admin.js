@@ -5,9 +5,10 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { v2 as cloudinary } from "cloudinary";
+import bcrypt from "bcryptjs";
 import { pool } from "./db.js";
-import { requireAuth } from "./auth.js";
-import { parseMultiline, parseTags, slugify, validYouTubeUrl } from "./helpers.js";
+import { requireAuth, requireSuperadmin } from "./auth.js";
+import { contributorSummarySql, parseMultiline, parseTags, slugify, validYouTubeUrl } from "./helpers.js";
 
 const router = Router();
 const uploadDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../uploads");
@@ -92,6 +93,43 @@ router.use((req, res, next) => images(req, res, (error) => {
   next();
 }));
 
+router.get("/admins", requireSuperadmin, async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, email, created_at FROM admins ORDER BY created_at ASC, id ASC"
+    );
+    res.json({ admins: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/admins", requireSuperadmin, async (req, res, next) => {
+  const name = String(req.body?.name || "").trim();
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
+  if (!name || name.length > 120) {
+    return res.status(400).json({ error: "El nombre es obligatorio y no debe exceder 120 caracteres." });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Escribe un correo electrónico válido." });
+  }
+  if (password.length < 12) {
+    return res.status(400).json({ error: "La contraseña debe tener al menos 12 caracteres." });
+  }
+  try {
+    const passwordHash = await bcrypt.hash(password, 12);
+    const result = await pool.query(
+      "INSERT INTO admins (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, created_at",
+      [name, email, passwordHash]
+    );
+    res.status(201).json({ admin: result.rows[0] });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "Ya existe una cuenta con ese correo." });
+    next(error);
+  }
+});
+
 router.get("/saints", async (_req, res, next) => {
   try {
     const result = await pool.query(`
@@ -99,7 +137,8 @@ router.get("/saints", async (_req, res, next) => {
         COALESCE((SELECT json_agg(json_build_object('id', m.id, 'title', m.title, 'description', m.description) ORDER BY m.id)
           FROM miracles m WHERE m.saint_id = s.id), '[]'::json) AS miracles,
         COALESCE((SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY t.name)
-          FROM saint_tags st JOIN tags t ON t.id = st.tag_id WHERE st.saint_id = s.id), '[]'::json) AS tags
+          FROM saint_tags st JOIN tags t ON t.id = st.tag_id WHERE st.saint_id = s.id), '[]'::json) AS tags,
+        ${contributorSummarySql}
       FROM saints s
       ORDER BY s.updated_at DESC, s.name ASC
       LIMIT 500
@@ -174,6 +213,10 @@ router.post("/saints", async (req, res, next) => {
       ...content.imageUrls, content.youtubeUrl, content.published, req.admin.id
     ]);
     await replaceRelations(client, result.rows[0].id, content);
+    await client.query(`
+      INSERT INTO saint_contributions (saint_id, admin_id, contributor_name, action)
+      SELECT $1, id, name, 'created' FROM admins WHERE id = $2
+    `, [result.rows[0].id, req.admin.id]);
     await client.query("COMMIT");
     res.status(201).json({ saint: result.rows[0] });
   } catch (error) {
@@ -203,6 +246,10 @@ router.put("/saints/:id", async (req, res, next) => {
       content.patronages, ...content.imageUrls, content.youtubeUrl, content.published, req.params.id
     ]);
     await replaceRelations(client, req.params.id, content);
+    await client.query(`
+      INSERT INTO saint_contributions (saint_id, admin_id, contributor_name, action)
+      SELECT $1, id, name, 'updated' FROM admins WHERE id = $2
+    `, [req.params.id, req.admin.id]);
     await client.query("COMMIT");
     res.json({ saint: result.rows[0] });
   } catch (error) {

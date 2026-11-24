@@ -18,3 +18,18 @@ export function parseTags(text) {
 export function validYouTubeUrl(value) {
   return !value || /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(value);
 }
+
+export const contributorSummarySql = `
+  COALESCE((
+    SELECT json_agg(
+      json_build_object('name', contributors.name, 'contributions', contributors.contributions)
+      ORDER BY contributors.contributions DESC, contributors.name ASC
+    )
+    FROM (
+      SELECT contributor_name AS name, COUNT(*)::int AS contributions
+      FROM saint_contributions
+      WHERE saint_id = s.id
+      GROUP BY contributor_name
+    ) contributors
+  ), '[]'::json) AS contributors
+`;

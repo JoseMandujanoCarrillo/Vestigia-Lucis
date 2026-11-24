@@ -2,8 +2,16 @@ CREATE TABLE IF NOT EXISTS admins (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    is_superadmin BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN NOT NULL DEFAULT FALSE;
+UPDATE admins SET name = email WHERE name IS NULL OR BTRIM(name) = '';
+CREATE UNIQUE INDEX IF NOT EXISTS admins_single_superadmin_idx
+    ON admins (is_superadmin) WHERE is_superadmin = TRUE;
 
 CREATE TABLE IF NOT EXISTS saints (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -59,9 +67,28 @@ CREATE TABLE IF NOT EXISTS saint_tags (
     PRIMARY KEY (saint_id, tag_id)
 );
 
+CREATE TABLE IF NOT EXISTS saint_contributions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    saint_id BIGINT NOT NULL REFERENCES saints(id) ON DELETE CASCADE,
+    admin_id BIGINT REFERENCES admins(id) ON DELETE SET NULL,
+    contributor_name TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('created', 'updated')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO saint_contributions (saint_id, admin_id, contributor_name, action, created_at)
+SELECT s.id, s.created_by, COALESCE(NULLIF(a.name, ''), a.email), 'created', s.created_at
+FROM saints s
+JOIN admins a ON a.id = s.created_by
+WHERE NOT EXISTS (
+    SELECT 1 FROM saint_contributions c
+    WHERE c.saint_id = s.id AND c.admin_id = s.created_by AND c.action = 'created'
+);
+
 CREATE INDEX IF NOT EXISTS saints_published_idx ON saints (is_published);
 CREATE INDEX IF NOT EXISTS saints_name_idx ON saints (LOWER(name));
 CREATE INDEX IF NOT EXISTS saints_origin_idx ON saints (LOWER(origin_place));
 CREATE INDEX IF NOT EXISTS miracles_saint_id_idx ON miracles (saint_id);
 CREATE INDEX IF NOT EXISTS tags_category_name_idx ON tags (category, name);
 CREATE INDEX IF NOT EXISTS saint_tags_tag_id_idx ON saint_tags (tag_id);
+CREATE INDEX IF NOT EXISTS saint_contributions_saint_id_idx ON saint_contributions (saint_id);

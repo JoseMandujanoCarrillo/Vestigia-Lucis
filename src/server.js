@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pool } from "./db.js";
+import { requireAuth } from "./auth.js";
 import saintsRouter from "./saints.js";
 import adminRouter from "./admin.js";
 
@@ -54,13 +55,26 @@ app.post("/api/auth/login", async (req, res, next) => {
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = String(req.body?.password || "");
     if (!email || !password) return res.status(400).json({ error: "Correo y contraseña son obligatorios." });
-    const result = await pool.query("SELECT id, email, password_hash FROM admins WHERE email = $1", [email]);
+    const result = await pool.query("SELECT id, email, name, password_hash, is_superadmin FROM admins WHERE email = $1", [email]);
     const admin = result.rows[0];
     if (!admin || !(await bcrypt.compare(password, admin.password_hash))) {
       return res.status(401).json({ error: "Correo o contraseña incorrectos." });
     }
     const token = jwt.sign({ id: admin.id, email: admin.email }, process.env.JWT_SECRET, { expiresIn: "8h" });
-    res.json({ token, admin: { id: admin.id, email: admin.email } });
+    res.json({ token, admin: { id: admin.id, email: admin.email, name: admin.name, is_superadmin: admin.is_superadmin } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/auth/me", requireAuth, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, email, name, is_superadmin FROM admins WHERE id = $1",
+      [req.admin.id]
+    );
+    if (!result.rowCount) return res.status(401).json({ error: "La cuenta administradora ya no existe." });
+    res.json({ admin: result.rows[0] });
   } catch (error) {
     next(error);
   }

@@ -8,13 +8,15 @@ API Express/PostgreSQL para Vestigia Lucis.
 - Start: `npm start`
 - Health check: `/api/health`
 
-Configura `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `FRONTEND_ORIGIN` y `CLOUDINARY_URL`.
+Configura `DATABASE_URL`, `JWT_SECRET`, `SUPERADMIN_NAME`, `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD`, `FRONTEND_ORIGIN` y `CLOUDINARY_URL`. El nombre y correo iniciales son José Carrillo y Admin@VestigiaLuce.com; define una contraseña nueva de al menos 12 caracteres como variable privada.
 
-Después del primer despliegue ejecuta:
+Configura en Render las variables privadas `SUPERADMIN_NAME=José Carrillo`, `SUPERADMIN_EMAIL=Admin@VestigiaLuce.com` y una contraseña nueva (`SUPERADMIN_PASSWORD`, mínimo 12 caracteres). Ejecuta ambos comandos desde Render Shell o desde un equipo conectado a la misma base de datos:
 
 ```bash
 npm run db:init
 npm run admin:create
 ```
+
+`npm run db:init` migra el esquema existente. `npm run admin:create` crea o actualiza la cuenta principal y restablece su contraseña cada vez que se ejecuta. La administradora principal puede crear otras cuentas desde el panel, pero las demás cuentas no pueden crear administradores. Cada creación o guardado de un santo cuenta como un aporte; los registros históricos conservan al creador original cuando existe.
 
 En desarrollo, las imágenes se guardan en `uploads/`. En Render, configura `CLOUDINARY_URL` con la variable de entorno que proporciona Cloudinary para guardarlas de forma persistente; la base de datos guardará sus URL seguras. Mantén ese valor privado y fuera de GitHub. Las imágenes locales que ya estaban guardadas no se migran automáticamente: vuelve a subirlas desde Administración después de configurar Cloudinary.
