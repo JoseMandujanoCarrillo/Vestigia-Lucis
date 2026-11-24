@@ -96,7 +96,7 @@ router.use((req, res, next) => images(req, res, (error) => {
 router.get("/admins", requireSuperadmin, async (_req, res, next) => {
   try {
     const result = await pool.query(
-      "SELECT id, name, email, created_at FROM admins ORDER BY created_at ASC, id ASC"
+      "SELECT id, name, email, is_superadmin, created_at FROM admins ORDER BY created_at ASC, id ASC"
     );
     res.json({ admins: result.rows });
   } catch (error) {
@@ -126,6 +126,63 @@ router.post("/admins", requireSuperadmin, async (req, res, next) => {
     res.status(201).json({ admin: result.rows[0] });
   } catch (error) {
     if (error.code === "23505") return res.status(409).json({ error: "Ya existe una cuenta con ese correo." });
+    next(error);
+  }
+});
+
+router.put("/admins/:id", requireSuperadmin, async (req, res, next) => {
+  const name = String(req.body?.name || "").trim();
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
+  if (!name || name.length > 120) {
+    return res.status(400).json({ error: "El nombre es obligatorio y no debe exceder 120 caracteres." });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Escribe un correo electrónico válido." });
+  }
+  if (password && password.length < 12) {
+    return res.status(400).json({ error: "La contraseña nueva debe tener al menos 12 caracteres." });
+  }
+  try {
+    const existing = await pool.query(
+      "SELECT id, is_superadmin FROM admins WHERE id = $1",
+      [req.params.id]
+    );
+    if (!existing.rowCount) return res.status(404).json({ error: "No encontramos esa cuenta." });
+    if (existing.rows[0].is_superadmin) {
+      return res.status(403).json({ error: "La cuenta principal solo puede cambiar su contraseña desde Mi cuenta." });
+    }
+
+    const values = [name, email];
+    let passwordClause = "";
+    if (password) {
+      values.push(await bcrypt.hash(password, 12));
+      passwordClause = `, password_hash = $${values.length}`;
+    }
+    values.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE admins SET name = $1, email = $2${passwordClause} WHERE id = $${values.length}
+       RETURNING id, name, email, created_at`,
+      values
+    );
+    res.json({ admin: result.rows[0] });
+  } catch (error) {
+    if (error.code === "23505") return res.status(409).json({ error: "Ya existe una cuenta con ese correo." });
+    next(error);
+  }
+});
+
+router.delete("/admins/:id", requireSuperadmin, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      "DELETE FROM admins WHERE id = $1 AND is_superadmin = FALSE AND id <> $2 RETURNING id",
+      [req.params.id, req.admin.id]
+    );
+    if (!result.rowCount) {
+      return res.status(404).json({ error: "No encontramos una cuenta eliminable. La cuenta principal no se puede borrar." });
+    }
+    res.status(204).end();
+  } catch (error) {
     next(error);
   }
 });

@@ -17,6 +17,6 @@ npm run db:init
 npm run admin:create
 ```
 
-`npm run db:init` migra el esquema existente. `npm run admin:create` crea o actualiza la cuenta principal y restablece su contraseña cada vez que se ejecuta. La administradora principal puede crear otras cuentas desde el panel, pero las demás cuentas no pueden crear administradores. Cada creación o guardado de un santo cuenta como un aporte; los registros históricos conservan al creador original cuando existe.
+`npm run db:init` migra el esquema existente. `npm run admin:create` crea o actualiza la cuenta principal y restablece su contraseña cada vez que se ejecuta. Desde el menú de la aplicación, cada administrador puede abrir **Mi cuenta y usuarios** para cambiar su contraseña. La cuenta principal también puede crear, editar y borrar cuentas administradoras; las demás cuentas no pueden gestionar usuarios. Cada creación o guardado de un santo cuenta como un aporte; los registros históricos conservan al creador original cuando existe.
 
 En desarrollo, las imágenes se guardan en `uploads/`. En Render, configura `CLOUDINARY_URL` con la variable de entorno que proporciona Cloudinary para guardarlas de forma persistente; la base de datos guardará sus URL seguras. Mantén ese valor privado y fuera de GitHub. Las imágenes locales que ya estaban guardadas no se migran automáticamente: vuelve a subirlas desde Administración después de configurar Cloudinary.
