@@ -18,7 +18,11 @@ async function request(path, options = {}, token) {
   if (options.body && !(options.body instanceof FormData)) headers["Content-Type"] = "application/json";
   const response = await fetch(`${API}${path}`, { ...options, headers });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "No se pudo completar la solicitud.");
+  if (!response.ok) {
+    const error = new Error(data.error || "No se pudo completar la solicitud.");
+    error.status = response.status;
+    throw error;
+  }
   return data;
 }
 
@@ -45,6 +49,16 @@ function App() {
   const [editingId, setEditingId] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+
+  function handleAdminError(error) {
+    if (error.status === 401) {
+      localStorage.removeItem("saints-admin-token");
+      setToken("");
+      setCurrentAdmin(null);
+      setAdminAccounts([]);
+    }
+    setAdminError(error.message);
+  }
 
   const query = useMemo(() => new URLSearchParams(
     Object.entries(filters).filter(([, value]) => value.trim())
@@ -85,7 +99,7 @@ function App() {
       const data = await request("/admin/saints", {}, token);
       setAdminSaints(data.saints);
     } catch (e) {
-      setAdminError(e.message);
+      handleAdminError(e);
     }
   }
 
@@ -95,7 +109,7 @@ function App() {
       const data = await request("/admin/admins", {}, token);
       setAdminAccounts(data.admins);
     } catch (e) {
-      setAdminError(e.message);
+      handleAdminError(e);
     }
   }
 
@@ -110,9 +124,7 @@ function App() {
       if (active) setCurrentAdmin(data.admin);
     }).catch((e) => {
       if (!active) return;
-      localStorage.removeItem("saints-admin-token");
-      setToken("");
-      setAdminError(e.message);
+      handleAdminError(e);
     });
     return () => { active = false; };
   }, [token]);
@@ -142,7 +154,7 @@ function App() {
       setToken(data.token);
       setAdminPassword("");
     } catch (e) {
-      setAdminError(e.message);
+      handleAdminError(e);
     }
   }
 
@@ -158,7 +170,7 @@ function App() {
       setNotice("Cuenta administradora creada correctamente.");
       await loadAdminAccounts();
     } catch (e) {
-      setAdminError(e.message);
+      handleAdminError(e);
     }
   }
 
@@ -208,7 +220,7 @@ function App() {
       await loadSaints();
       await loadAdminSaints();
     } catch (e) {
-      setAdminError(e.message);
+      handleAdminError(e);
     } finally {
       setSaving(false);
     }
@@ -222,7 +234,7 @@ function App() {
       await loadSaints();
       await loadAdminSaints();
     } catch (e) {
-      setAdminError(e.message);
+      handleAdminError(e);
     }
   }
 
