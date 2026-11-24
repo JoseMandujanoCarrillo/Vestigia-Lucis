@@ -40,6 +40,7 @@ function App() {
   const [currentAdmin, setCurrentAdmin] = useState(null);
   const [adminAccounts, setAdminAccounts] = useState([]);
   const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
+  const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", confirm_password: "" });
   const [adminSaints, setAdminSaints] = useState([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
@@ -171,6 +172,22 @@ function App() {
       await loadAdminAccounts();
     } catch (e) {
       handleAdminError(e);
+    }
+  }
+
+  async function changePassword(event) {
+    event.preventDefault();
+    setAdminError("");
+    setNotice("");
+    try {
+      const data = await request("/auth/password", {
+        method: "PUT",
+        body: JSON.stringify(passwordForm)
+      }, token);
+      setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+      setNotice(data.message);
+    } catch (error) {
+      handleAdminError(error);
     }
   }
 
@@ -374,6 +391,15 @@ function App() {
                     </form>
                   </section>
                 )}
+                <section className="password-account">
+                  <div><p className="eyebrow">SEGURIDAD</p><h3>Cambiar mi contraseña</h3></div>
+                  <form className="password-account-form" onSubmit={changePassword}>
+                    <label>Contraseña actual<input type="password" autoComplete="current-password" value={passwordForm.current_password} onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })} required /></label>
+                    <label>Contraseña nueva (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={passwordForm.new_password} onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })} minLength="12" required /></label>
+                    <label>Confirmar contraseña nueva<input type="password" autoComplete="new-password" value={passwordForm.confirm_password} onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} minLength="12" required /></label>
+                    <button className="button-primary" type="submit">Cambiar contraseña</button>
+                  </form>
+                </section>
                 <label className="admin-selector">Editar un santo existente
                   <select value={editingId} onChange={(e) => {
                     const saint = adminSaints.find((item) => String(item.id) === e.target.value);

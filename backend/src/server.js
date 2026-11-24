@@ -80,6 +80,36 @@ app.get("/api/auth/me", requireAuth, async (req, res, next) => {
   }
 });
 
+app.put("/api/auth/password", requireAuth, async (req, res, next) => {
+  try {
+    const currentPassword = String(req.body?.current_password || "");
+    const newPassword = String(req.body?.new_password || "");
+    const confirmPassword = String(req.body?.confirm_password || "");
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: "Completa la contraseña actual y la nueva contraseña." });
+    }
+    if (newPassword.length < 12) {
+      return res.status(400).json({ error: "La contraseña nueva debe tener al menos 12 caracteres." });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: "La confirmación no coincide con la contraseña nueva." });
+    }
+    const result = await pool.query(
+      "SELECT password_hash FROM admins WHERE id = $1",
+      [req.admin.id]
+    );
+    if (!result.rowCount) return res.status(401).json({ error: "La cuenta administradora ya no existe." });
+    if (!(await bcrypt.compare(currentPassword, result.rows[0].password_hash))) {
+      return res.status(401).json({ error: "La contraseña actual no es correcta." });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await pool.query("UPDATE admins SET password_hash = $1 WHERE id = $2", [passwordHash, req.admin.id]);
+    res.json({ message: "Contraseña actualizada correctamente." });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use("/api/saints", saintsRouter);
 app.use("/api/admin", adminRouter);
 
