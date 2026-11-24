@@ -16,3 +16,16 @@
 .contribution-summary strong{color:var(--ink)}
 .detail-view>.contribution-summary{max-width:900px;margin:0 auto 34px;padding:14px 18px;background:#f0ede4;border:0}
 @media(max-width:650px){.admin-account-form,.password-account-form{grid-template-columns:1fr}.admin-account-form .button-primary,.password-account-form .button-primary{justify-self:start}}
+.account-page{max-width:1080px;min-height:60vh;margin:0 auto;padding:48px 7.2% 80px}
+.account-page-heading{margin:28px 0}
+.account-page-heading h1{margin:0 0 8px;font-family:"Playfair Display",serif;font-size:clamp(34px,5vw,48px);font-weight:500}
+.account-page-heading>p:last-child,.account-page-help{color:var(--muted);font-size:13px}
+.account-page .password-account,.account-page .admin-accounts{margin:0 0 20px}
+.account-page .password-account h2,.account-page .admin-accounts h2{margin:0 0 10px;font-family:"Playfair Display",serif;font-size:24px;font-weight:500}
+.admin-account-actions{display:flex!important;flex-direction:row!important;gap:12px!important}
+.admin-account-actions button{border:0;background:none;color:#806536;font-size:11px}
+.admin-account-actions button:last-child{color:#9e4a43}
+.account-page .admin-account-list{align-items:flex-start;margin-top:18px}
+.account-page .admin-account-list li{min-width:180px;padding:12px;border:1px solid var(--line);background:var(--paper)}
+.account-page .form-error,.account-page .form-success{margin:12px 0}
+@media(max-width:650px){.account-page{padding:32px 5% 60px}}
