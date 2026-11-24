@@ -33,14 +33,12 @@ function App() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [accountPage, setAccountPage] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("saints-theme") || "classic");
   const [token, setToken] = useState(() => localStorage.getItem("saints-admin-token") || "");
   const [currentAdmin, setCurrentAdmin] = useState(null);
-  const [adminAccounts, setAdminAccounts] = useState([]);
-  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
-  const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", confirm_password: "" });
   const [adminSaints, setAdminSaints] = useState([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
@@ -56,7 +54,7 @@ function App() {
       localStorage.removeItem("saints-admin-token");
       setToken("");
       setCurrentAdmin(null);
-      setAdminAccounts([]);
+      setAccountPage(false);
     }
     setAdminError(error.message);
   }
@@ -104,20 +102,9 @@ function App() {
     }
   }
 
-  async function loadAdminAccounts() {
-    if (!token || !currentAdmin?.is_superadmin) return;
-    try {
-      const data = await request("/admin/admins", {}, token);
-      setAdminAccounts(data.admins);
-    } catch (e) {
-      handleAdminError(e);
-    }
-  }
-
   useEffect(() => {
     if (!token) {
       setCurrentAdmin(null);
-      setAdminAccounts([]);
       return undefined;
     }
     let active = true;
@@ -136,10 +123,7 @@ function App() {
   }, [query]);
 
   useEffect(() => {
-    if (adminOpen && token) {
-      loadAdminSaints();
-      loadAdminAccounts();
-    }
+    if (adminOpen && token) loadAdminSaints();
   }, [adminOpen, token, currentAdmin]);
 
   async function login(event) {
@@ -156,38 +140,6 @@ function App() {
       setAdminPassword("");
     } catch (e) {
       handleAdminError(e);
-    }
-  }
-
-  async function createAdmin(event) {
-    event.preventDefault();
-    setAdminError("");
-    try {
-      await request("/admin/admins", {
-        method: "POST",
-        body: JSON.stringify(newAdmin)
-      }, token);
-      setNewAdmin({ name: "", email: "", password: "" });
-      setNotice("Cuenta administradora creada correctamente.");
-      await loadAdminAccounts();
-    } catch (e) {
-      handleAdminError(e);
-    }
-  }
-
-  async function changePassword(event) {
-    event.preventDefault();
-    setAdminError("");
-    setNotice("");
-    try {
-      const data = await request("/auth/password", {
-        method: "PUT",
-        body: JSON.stringify(passwordForm)
-      }, token);
-      setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
-      setNotice(data.message);
-    } catch (error) {
-      handleAdminError(error);
     }
   }
 
@@ -259,7 +211,7 @@ function App() {
     localStorage.removeItem("saints-admin-token");
     setToken("");
     setCurrentAdmin(null);
-    setAdminAccounts([]);
+    setAccountPage(false);
     setForm(emptyForm);
     setEditingId("");
   }
@@ -277,6 +229,11 @@ function App() {
             <button className="options-toggle menu-options-button" onClick={() => { setMenuOpen(false); setOptionsOpen(true); }}>
               <span aria-hidden="true">⚙</span> Temas
             </button>
+            {token && currentAdmin && (
+              <button className="options-toggle menu-options-button" onClick={() => { setMenuOpen(false); setAdminOpen(false); setAccountPage(true); }}>
+                <span aria-hidden="true">♙</span> {currentAdmin.is_superadmin ? "Mi cuenta y usuarios" : "Mi cuenta"}
+              </button>
+            )}
           </aside>
         </div>
       )}
@@ -287,12 +244,12 @@ function App() {
             <button className="hamburger-toggle" onClick={() => setMenuOpen(true)} aria-label="Abrir menú de opciones" aria-expanded={menuOpen}>
               <span /><span /><span />
             </button>
-            <a className="brand" href="#" onClick={() => setSelected(null)} aria-label="Inicio">
+            <a className="brand" href="#" onClick={() => { setSelected(null); setAccountPage(false); }} aria-label="Inicio">
               <span className="brand-mark" aria-hidden="true">✝</span><span className="brand-wordmark">Vestigia <b>Lucis</b></span>
             </a>
           </div>
           <nav className="topbar-actions" aria-label="Administración">
-            <button className="admin-toggle" onClick={() => setAdminOpen(!adminOpen)}>
+            <button className="admin-toggle" onClick={() => { setAccountPage(false); setAdminOpen(!adminOpen); }}>
               {adminOpen ? "Cerrar administración" : "Administrar"}
             </button>
           </nav>
@@ -334,6 +291,14 @@ function App() {
         )}
 
       <main>
+        {accountPage && token && currentAdmin ? (
+          <AccountPage
+            token={token}
+            currentAdmin={currentAdmin}
+            onBack={() => setAccountPage(false)}
+            onError={handleAdminError}
+          />
+        ) : <>
         <section className="hero">
           <div className="hero-copy">
             <p className="eyebrow hero-eyebrow"><span aria-hidden="true">✦</span> RELATOS QUE ILUMINAN</p>
@@ -377,29 +342,6 @@ function App() {
                   <div><p className="eyebrow">PANEL DE CONTENIDO</p><h2>{editingId ? "Editar santo" : "Agregar un santo"}</h2><p className="admin-welcome">Sesión: {currentAdmin?.name || currentAdmin?.email}</p></div>
                   <button className="button-quiet" onClick={logout}>Cerrar sesión</button>
                 </div>
-                {currentAdmin?.is_superadmin && (
-                  <section className="admin-accounts">
-                    <div><p className="eyebrow">ACCESO AL PANEL</p><h3>Administradores</h3></div>
-                    <ul className="admin-account-list">
-                      {adminAccounts.map((account) => <li key={account.id}><strong>{account.name}</strong><span>{account.email}</span></li>)}
-                    </ul>
-                    <form className="admin-account-form" onSubmit={createAdmin}>
-                      <label>Nombre<input value={newAdmin.name} onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })} required maxLength="120" /></label>
-                      <label>Correo electrónico<input type="email" value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} required /></label>
-                      <label>Contraseña (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={newAdmin.password} onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })} minLength="12" required /></label>
-                      <button className="button-primary" type="submit">Crear cuenta</button>
-                    </form>
-                  </section>
-                )}
-                <section className="password-account">
-                  <div><p className="eyebrow">SEGURIDAD</p><h3>Cambiar mi contraseña</h3></div>
-                  <form className="password-account-form" onSubmit={changePassword}>
-                    <label>Contraseña actual<input type="password" autoComplete="current-password" value={passwordForm.current_password} onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })} required /></label>
-                    <label>Contraseña nueva (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={passwordForm.new_password} onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })} minLength="12" required /></label>
-                    <label>Confirmar contraseña nueva<input type="password" autoComplete="new-password" value={passwordForm.confirm_password} onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} minLength="12" required /></label>
-                    <button className="button-primary" type="submit">Cambiar contraseña</button>
-                  </form>
-                </section>
                 <label className="admin-selector">Editar un santo existente
                   <select value={editingId} onChange={(e) => {
                     const saint = adminSaints.find((item) => String(item.id) === e.target.value);
@@ -482,6 +424,7 @@ function App() {
             ) : <div className="empty-state"><span className="empty-icon">✦</span><h3>No encontramos historias</h3><p>Prueba con otros términos o limpia los filtros.</p></div>}
           </section>
         )}
+        </>}
       </main>
       <footer><span className="brand-mark" aria-hidden="true">✝</span><strong>Vestigia Lucis</strong><span className="footer-note">Historias para compartir en familia</span></footer>
       </div>
@@ -519,6 +462,146 @@ function SaintDetail({ saint, onBack }) {
       </div>
       {videoId && <section className="video-section"><p className="eyebrow">PARA CONOCER MÁS</p><h3>La historia en video</h3><div className="video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${videoId}`} title={`Video sobre ${saint.name}`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /></div></section>}
     </article>
+  );
+}
+
+function AccountPage({ token, currentAdmin, onBack, onError }) {
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(Boolean(currentAdmin.is_superadmin));
+  const [editingId, setEditingId] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [passwordForm, setPasswordForm] = useState({ current_password: "", new_password: "", confirm_password: "" });
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  function handleAccountError(requestError, isPasswordChange = false) {
+    if (requestError.status === 401 &&
+        !(isPasswordChange && requestError.message.toLowerCase().includes("contraseña actual"))) {
+      onError(requestError);
+      return;
+    }
+    setError(requestError.message);
+  }
+
+  async function loadAdmins() {
+    if (!currentAdmin.is_superadmin) return;
+    setLoading(true);
+    try {
+      const data = await request("/admin/admins", {}, token);
+      setAdmins(data.admins);
+    } catch (requestError) {
+      handleAccountError(requestError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAdmins();
+  }, [token, currentAdmin.is_superadmin]);
+
+  function beginEdit(admin) {
+    setEditingId(String(admin.id));
+    setForm({ name: admin.name, email: admin.email, password: "" });
+    setError("");
+    setMessage("");
+  }
+
+  function cancelEdit() {
+    setEditingId("");
+    setForm({ name: "", email: "", password: "" });
+  }
+
+  async function saveAdmin(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    try {
+      await request(editingId ? `/admin/admins/${editingId}` : "/admin/admins", {
+        method: editingId ? "PUT" : "POST",
+        body: JSON.stringify(form)
+      }, token);
+      setMessage(editingId ? "Cuenta actualizada." : "Cuenta creada.");
+      cancelEdit();
+      await loadAdmins();
+    } catch (requestError) {
+      handleAccountError(requestError);
+    }
+  }
+
+  async function deleteAdmin(admin) {
+    if (!window.confirm(`¿Eliminar la cuenta de ${admin.name} (${admin.email})?`)) return;
+    setError("");
+    setMessage("");
+    try {
+      await request(`/admin/admins/${admin.id}`, { method: "DELETE" }, token);
+      setMessage("Cuenta eliminada.");
+      await loadAdmins();
+    } catch (requestError) {
+      handleAccountError(requestError);
+    }
+  }
+
+  async function changePassword(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    try {
+      const data = await request("/auth/password", {
+        method: "PUT",
+        body: JSON.stringify(passwordForm)
+      }, token);
+      setPasswordForm({ current_password: "", new_password: "", confirm_password: "" });
+      setMessage(data.message);
+    } catch (requestError) {
+      handleAccountError(requestError, true);
+    }
+  }
+
+  return (
+    <section className="account-page">
+      <button className="back-link" onClick={onBack}>← Volver al glosario</button>
+      <header className="account-page-heading">
+        <p className="eyebrow">MI CUENTA</p>
+        <h1>Cuenta y seguridad</h1>
+        <p>Sesión iniciada como <strong>{currentAdmin.name || currentAdmin.email}</strong></p>
+      </header>
+      <section className="password-account">
+        <div><p className="eyebrow">SEGURIDAD</p><h2>Cambiar mi contraseña</h2><p className="account-page-help">Confirma tu contraseña actual y elige una nueva de al menos 12 caracteres.</p></div>
+        <form className="password-account-form" onSubmit={changePassword}>
+          <label>Contraseña actual<input type="password" autoComplete="current-password" value={passwordForm.current_password} onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })} required /></label>
+          <label>Contraseña nueva (mínimo 12 caracteres)<input type="password" autoComplete="new-password" value={passwordForm.new_password} onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })} minLength="12" required /></label>
+          <label>Confirmar contraseña nueva<input type="password" autoComplete="new-password" value={passwordForm.confirm_password} onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })} minLength="12" required /></label>
+          <button className="button-primary" type="submit">Cambiar contraseña</button>
+        </form>
+      </section>
+      {currentAdmin.is_superadmin && (
+        <section className="admin-accounts">
+          <div><p className="eyebrow">GESTIÓN DE ACCESOS</p><h2>Usuarios administradores</h2><p className="account-page-help">Solo la cuenta superadministradora puede administrar estos usuarios.</p></div>
+          <form className="admin-account-form" onSubmit={saveAdmin}>
+            <label>Nombre<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required maxLength="120" /></label>
+            <label>Correo electrónico<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></label>
+            <label>{editingId ? "Nueva contraseña (opcional)" : "Contraseña (mínimo 12 caracteres)"}<input type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} minLength={form.password || !editingId ? 12 : undefined} required={!editingId} /></label>
+            <button className="button-primary" type="submit">{editingId ? "Guardar cambios" : "Crear usuario"}</button>
+            {editingId && <button className="button-quiet" type="button" onClick={cancelEdit}>Cancelar</button>}
+          </form>
+          {loading ? <p>Cargando usuarios…</p> : (
+            <ul className="admin-account-list">
+              {admins.map((admin) => (
+                <li key={admin.id}>
+                  <strong>{admin.name}</strong><span>{admin.email}</span>
+                  {admin.is_superadmin
+                    ? <span>Superadministrador</span>
+                    : <span className="admin-account-actions"><button type="button" onClick={() => beginEdit(admin)}>Editar</button><button type="button" onClick={() => deleteAdmin(admin)}>Borrar</button></span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+      {error && <p className="form-error">{error}</p>}
+      {message && <p className="form-success">{message}</p>}
+    </section>
   );
 }
 

@@ -33,6 +33,7 @@ La migración añade el nombre y rol de administradores y el historial de aporte
 - `POST /api/admin/saints`: crea un santo (Bearer token y `multipart/form-data`).
 - `PUT /api/admin/saints/:id`: actualiza un santo (Bearer token).
 - `DELETE /api/admin/saints/:id`: elimina un santo (Bearer token).
-- `GET /api/admin/admins` y `POST /api/admin/admins`: gestión de cuentas, restringida a la cuenta principal.
+- `GET /api/admin/admins`, `POST /api/admin/admins`, `PUT /api/admin/admins/:id` y `DELETE /api/admin/admins/:id`: gestión de cuentas, restringida a la cuenta principal.
+- `PUT /api/auth/password`: cambio de contraseña del administrador autenticado.
 
 Al crear un santo, envía `image_1`, `image_2` e `image_3` como archivos JPG, PNG o WebP (máximo 5 MB cada uno). Se pueden ingresar milagros, uno por línea; para especificar título, usa `Título: descripción`. Las etiquetas se separan por comas.
