@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "./db.js";
+import { contributorSummarySql } from "./helpers.js";
 
 const router = Router();
 
@@ -35,7 +36,8 @@ router.get("/", async (req, res, next) => {
         COALESCE((SELECT json_agg(json_build_object('id', m.id, 'title', m.title, 'description', m.description) ORDER BY m.id)
           FROM miracles m WHERE m.saint_id = s.id), '[]'::json) AS miracles,
         COALESCE((SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY t.name)
-          FROM saint_tags st JOIN tags t ON t.id = st.tag_id WHERE st.saint_id = s.id), '[]'::json) AS tags
+          FROM saint_tags st JOIN tags t ON t.id = st.tag_id WHERE st.saint_id = s.id), '[]'::json) AS tags,
+        ${contributorSummarySql}
       FROM saints s
       WHERE ${where.join(" AND ")}
       ORDER BY s.name ASC
@@ -54,7 +56,8 @@ router.get("/:id", async (req, res, next) => {
         COALESCE((SELECT json_agg(json_build_object('id', m.id, 'title', m.title, 'description', m.description) ORDER BY m.id)
           FROM miracles m WHERE m.saint_id = s.id), '[]'::json) AS miracles,
         COALESCE((SELECT json_agg(json_build_object('id', t.id, 'name', t.name) ORDER BY t.name)
-          FROM saint_tags st JOIN tags t ON t.id = st.tag_id WHERE st.saint_id = s.id), '[]'::json) AS tags
+          FROM saint_tags st JOIN tags t ON t.id = st.tag_id WHERE st.saint_id = s.id), '[]'::json) AS tags,
+        ${contributorSummarySql}
       FROM saints s WHERE s.id = $1 AND s.is_published = TRUE
     `, [req.params.id]);
     if (!result.rowCount) return res.status(404).json({ error: "No encontramos ese santo." });

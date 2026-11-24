@@ -12,9 +12,11 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: ADMIN_EMAIL
+      - key: SUPERADMIN_NAME
         sync: false
-      - key: ADMIN_PASSWORD
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
         sync: false
       - key: FRONTEND_ORIGIN
         sync: false
