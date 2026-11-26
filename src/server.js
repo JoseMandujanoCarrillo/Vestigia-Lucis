@@ -112,6 +112,9 @@ app.use("/api/admin", adminRouter);
 
 app.use((error, _req, res, _next) => {
   console.error(error);
+  if (error.code === "23514" && error.constraint === "saints_dates_ordered") {
+    return res.status(400).json({ error: "La fecha de nacimiento no puede ser posterior a la fecha de fallecimiento." });
+  }
   if (error.code === "23514") return res.status(400).json({ error: "Los datos no cumplen las reglas de la base de datos." });
   if (error.code === "22007" || error.code === "22008") return res.status(400).json({ error: "Una fecha no tiene un formato válido." });
   res.status(error.status || 500).json({ error: error.status ? error.message : "Error interno del API." });
