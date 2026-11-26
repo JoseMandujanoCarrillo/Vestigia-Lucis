@@ -406,16 +406,16 @@ function App() {
                         ), 0);
                         setForm((previousForm) => ({
                           ...previousForm,
-                          is_published: count < 3 ? false : previousForm.is_published
+                          is_published: count > 0
                         }));
                         setSaintSaveError("");
                       }} />
                     </label>
                   ))}
                   <p className="image-upload-help span-two">
-                    Imágenes seleccionadas: {imageCount} de 3. Puedes guardar con 1, 2 o 3; para publicar en el glosario se requieren las 3. Con menos de 3 se guardará como borrador.
+                    Imágenes seleccionadas: {imageCount} de 3. Se requiere al menos una imagen y puedes publicar con 1, 2 o 3; al elegir una, se activará la publicación automáticamente.
                   </p>
-                  <label className="publish-option"><input type="checkbox" checked={form.is_published} disabled={imageCount < 3} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
+                  <label className="publish-option"><input type="checkbox" checked={form.is_published} disabled={imageCount === 0} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
                   <div className="form-actions span-two">
                     <button className="button-primary" type="submit" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Crear santo"}</button>
                     {editingId && <button className="button-quiet" type="button" onClick={() => { setEditingId(""); setForm(emptyForm); setImages([null, null, null]); }}>Cancelar edición</button>}
