@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const API = (
   import.meta.env.VITE_API_URL ||
@@ -61,6 +61,7 @@ function App() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
   const [saintSaveError, setSaintSaveError] = useState("");
+  const saintSaveErrorRef = useRef(null);
   const [form, setForm] = useState(emptyForm);
   const [images, setImages] = useState([null, null, null]);
   const [editingId, setEditingId] = useState("");
@@ -84,6 +85,12 @@ function App() {
   useEffect(() => {
     localStorage.setItem("saints-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (saintSaveError) {
+      saintSaveErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [saintSaveError]);
 
   useEffect(() => {
     if (!optionsOpen && !menuOpen) return undefined;
@@ -185,6 +192,10 @@ function App() {
 
   async function saveSaint(event) {
     event.preventDefault();
+    if (dateOrderError) {
+      setSaintSaveError("La fecha de nacimiento no puede ser posterior a la fecha de fallecimiento. Revisa ambos campos.");
+      return;
+    }
     if (!editingId && imageCount === 0) {
       setSaintSaveError("Selecciona al menos una imagen para guardar el santo.");
       return;
@@ -245,6 +256,7 @@ function App() {
   const imageCount = images.reduce((count, image, index) => (
     image || editingSaint?.[`image_${index + 1}_url`] ? count + 1 : count
   ), 0);
+  const dateOrderError = Boolean(form.birth_date && form.death_date && form.birth_date > form.death_date);
 
   return (
     <div className="app-shell" data-theme={theme}>
@@ -372,7 +384,6 @@ function App() {
                   <div><p className="eyebrow">PANEL DE CONTENIDO</p><h2>{editingId ? "Editar santo" : "Agregar un santo"}</h2><p className="admin-welcome">Sesión: {currentAdmin?.name || currentAdmin?.email}</p></div>
                   <button className="button-quiet" onClick={logout}>Cerrar sesión</button>
                 </div>
-                {saintSaveError && <div className="form-error upload-error" role="alert"><strong>No se pudo guardar el santo</strong><span>{saintSaveError}</span></div>}
                 <label className="admin-selector">Editar un santo existente
                   <select value={editingId} onChange={(e) => {
                     const saint = adminSaints.find((item) => String(item.id) === e.target.value);
@@ -388,8 +399,9 @@ function App() {
                   <label>Lugar de procedencia *<input value={form.origin_place} onChange={(e) => setForm({ ...form, origin_place: e.target.value })} required maxLength="180" /></label>
                   <label>País<input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} maxLength="120" /></label>
                   <label>Día festivo<input value={form.feast_day} onChange={(e) => setForm({ ...form, feast_day: e.target.value })} placeholder="Ej. 4 de octubre" maxLength="100" /></label>
-                  <label>Fecha de nacimiento<input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} /></label>
-                  <label>Fecha de fallecimiento<input type="date" value={form.death_date} onChange={(e) => setForm({ ...form, death_date: e.target.value })} /></label>
+                  <label>Fecha de nacimiento<input type="date" value={form.birth_date} aria-invalid={dateOrderError} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} /></label>
+                  <label>Fecha de fallecimiento<input type="date" value={form.death_date} aria-invalid={dateOrderError} onChange={(e) => setForm({ ...form, death_date: e.target.value })} /></label>
+                  {dateOrderError && <p className="form-error date-order-error span-two" role="alert">La fecha de nacimiento debe ser anterior o igual a la fecha de fallecimiento.</p>}
                   <label className="span-two">Descripción breve *<textarea rows="2" value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} required maxLength="500" /></label>
                   <label className="span-two">Historia / biografía<textarea rows="5" value={form.biography} onChange={(e) => setForm({ ...form, biography: e.target.value })} /></label>
                   <label className="span-two">Milagros (uno por línea; opcionalmente “Título: descripción”)<textarea rows="4" value={form.miracles} onChange={(e) => setForm({ ...form, miracles: e.target.value })} /></label>
@@ -411,6 +423,7 @@ function App() {
                   <label className="publish-option"><input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
                   <div className="form-actions span-two">
                     <button className="button-primary" type="submit" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Crear santo"}</button>
+                    {saintSaveError && <div ref={saintSaveErrorRef} className="form-error upload-error" role="alert"><strong>No se pudo guardar el santo</strong><span>{saintSaveError}</span></div>}
                     {editingId && <button className="button-quiet" type="button" onClick={() => { setEditingId(""); setForm(emptyForm); setImages([null, null, null]); }}>Cancelar edición</button>}
                     {editingId && <button className="button-danger" type="button" onClick={() => {
                       const saint = adminSaints.find((item) => String(item.id) === editingId);
