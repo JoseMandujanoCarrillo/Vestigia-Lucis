@@ -36,4 +36,4 @@ La migración añade el nombre y rol de administradores y el historial de aporte
 - `GET /api/admin/admins`, `POST /api/admin/admins`, `PUT /api/admin/admins/:id` y `DELETE /api/admin/admins/:id`: gestión de cuentas, restringida a la cuenta principal.
 - `PUT /api/auth/password`: cambio de contraseña del administrador autenticado.
 
-Al crear un santo, envía `image_1`, `image_2` e `image_3` como archivos JPG, PNG o WebP (máximo 5 MB cada uno). Se pueden ingresar milagros, uno por línea; para especificar título, usa `Título: descripción`. Las etiquetas se separan por comas.
+Al crear un santo, envía de una a tres imágenes `image_1`, `image_2` e `image_3` como archivos JPG, PNG o WebP (máximo 5 MB cada uno). Sin modificar la base de datos, los santos con menos de tres imágenes se guardan como borradores, ya que el esquema actual exige tres imágenes para publicar. Se pueden ingresar milagros, uno por línea; para especificar título, usa `Título: descripción`. Las etiquetas se separan por comas.
