@@ -9,7 +9,7 @@ const mediaUrl = (url) => url?.startsWith("/") ? `${API_ORIGIN}${url}` : url;
 const emptyForm = {
   name: "", short_description: "", biography: "", origin_place: "", country: "",
   birth_date: "", death_date: "", feast_day: "", patronages: "", youtube_url: "",
-  miracles: "", tags: "", is_published: false
+  miracles: "", tags: "", is_published: true
 };
 
 async function request(path, options = {}, token) {
@@ -401,21 +401,14 @@ function App() {
                       <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
                         const nextImages = images.map((image, i) => i === index ? e.target.files?.[0] || null : image);
                         setImages(nextImages);
-                        const count = nextImages.reduce((total, image, i) => (
-                          image || editingSaint?.[`image_${i + 1}_url`] ? total + 1 : total
-                        ), 0);
-                        setForm((previousForm) => ({
-                          ...previousForm,
-                          is_published: count > 0
-                        }));
                         setSaintSaveError("");
                       }} />
                     </label>
                   ))}
                   <p className="image-upload-help span-two">
-                    Imágenes seleccionadas: {imageCount} de 3. Se requiere al menos una imagen y puedes publicar con 1, 2 o 3; al elegir una, se activará la publicación automáticamente.
+                    Imágenes seleccionadas: {imageCount} de 3. La publicación está activada por defecto; desmarca esta opción si deseas guardar como borrador. Se requiere al menos una imagen y puedes usar hasta tres.
                   </p>
-                  <label className="publish-option"><input type="checkbox" checked={form.is_published} disabled={imageCount === 0} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
+                  <label className="publish-option"><input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
                   <div className="form-actions span-two">
                     <button className="button-primary" type="submit" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Crear santo"}</button>
                     {editingId && <button className="button-quiet" type="button" onClick={() => { setEditingId(""); setForm(emptyForm); setImages([null, null, null]); }}>Cancelar edición</button>}
