@@ -37,11 +37,13 @@ CREATE TABLE IF NOT EXISTS saints (
     CONSTRAINT saints_youtube_url_valid CHECK (
         youtube_url IS NULL OR youtube_url ~* '^https?://(www\.)?(youtube\.com|youtu\.be)/'
     ),
-    CONSTRAINT published_saints_have_three_images CHECK (
+    CONSTRAINT published_saints_have_one_to_three_images CHECK (
         NOT is_published OR (
-            image_1_url IS NOT NULL AND image_1_url <> '' AND
-            image_2_url IS NOT NULL AND image_2_url <> '' AND
-            image_3_url IS NOT NULL AND image_3_url <> ''
+            num_nonnulls(
+                NULLIF(BTRIM(image_1_url), ''),
+                NULLIF(BTRIM(image_2_url), ''),
+                NULLIF(BTRIM(image_3_url), '')
+            ) BETWEEN 1 AND 3
         )
     )
 );

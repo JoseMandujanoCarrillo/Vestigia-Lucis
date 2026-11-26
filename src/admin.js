@@ -220,7 +220,7 @@ function contentFromRequest(body, files, existing = {}) {
     return cloudinaryConfigured ? file.path : `/uploads/${file.filename}`;
   });
   const published = body.is_published === undefined ? true : body.is_published === "true" || body.is_published === true;
-  if (published && imageUrls.some((url) => !url)) throw Object.assign(new Error("Para publicar se requieren las tres imágenes."), { status: 400 });
+  if (published && imageUrls.every((url) => !url)) throw Object.assign(new Error("Para publicar se requiere al menos una imagen."), { status: 400 });
 
   return {
     name, shortDescription, originPlace, youtubeUrl, imageUrls, published,
