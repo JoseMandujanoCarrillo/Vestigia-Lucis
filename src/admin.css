@@ -28,4 +28,6 @@
 .account-page .admin-account-list{align-items:flex-start;margin-top:18px}
 .account-page .admin-account-list li{min-width:180px;padding:12px;border:1px solid var(--line);background:var(--paper)}
 .account-page .form-error,.account-page .form-success{margin:12px 0}
+.admin-panel .upload-error{display:flex;flex-direction:column;gap:4px;margin:0 0 16px;padding:12px 14px;border:1px solid #e4c4c0;background:#fff6f5;line-height:1.5}
+.image-upload-help{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
 @media(max-width:650px){.account-page{padding:32px 5% 60px}}

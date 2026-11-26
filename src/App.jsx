@@ -9,7 +9,7 @@ const mediaUrl = (url) => url?.startsWith("/") ? `${API_ORIGIN}${url}` : url;
 const emptyForm = {
   name: "", short_description: "", biography: "", origin_place: "", country: "",
   birth_date: "", death_date: "", feast_day: "", patronages: "", youtube_url: "",
-  miracles: "", tags: "", is_published: true
+  miracles: "", tags: "", is_published: false
 };
 
 async function request(path, options = {}, token) {
@@ -24,6 +24,23 @@ async function request(path, options = {}, token) {
     throw error;
   }
   return data;
+}
+
+function saintSaveErrorMessage(error) {
+  const message = error.message.toLowerCase();
+  if (error.status === 413 || message.includes("file too large")) {
+    return "No se pudo subir la imagen. Cada archivo debe pesar 5 MB o menos.";
+  }
+  if (error.status === 502) {
+    return "No se pudieron guardar las imágenes. Revisa la conexión del servicio de almacenamiento e inténtalo de nuevo.";
+  }
+  if (!error.status) {
+    return "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.";
+  }
+  if (error.status >= 500) {
+    return "El servidor tuvo un problema al guardar el santo. Inténtalo de nuevo más tarde.";
+  }
+  return error.message;
 }
 
 function App() {
@@ -43,6 +60,7 @@ function App() {
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
+  const [saintSaveError, setSaintSaveError] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [images, setImages] = useState([null, null, null]);
   const [editingId, setEditingId] = useState("");
@@ -144,6 +162,7 @@ function App() {
   }
 
   function startEditing(saint) {
+    setSaintSaveError("");
     setEditingId(String(saint.id));
     setForm({
       name: saint.name || "",
@@ -166,9 +185,14 @@ function App() {
 
   async function saveSaint(event) {
     event.preventDefault();
+    if (!editingId && imageCount === 0) {
+      setSaintSaveError("Selecciona al menos una imagen para guardar el santo.");
+      return;
+    }
     setSaving(true);
     setNotice("");
     setAdminError("");
+    setSaintSaveError("");
     const body = new FormData();
     for (const [key, value] of Object.entries(form)) {
       if (key === "is_published") body.append(key, String(value));
@@ -189,7 +213,8 @@ function App() {
       await loadSaints();
       await loadAdminSaints();
     } catch (e) {
-      handleAdminError(e);
+      if (e.status === 401) handleAdminError(e);
+      else setSaintSaveError(saintSaveErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -215,6 +240,11 @@ function App() {
     setForm(emptyForm);
     setEditingId("");
   }
+
+  const editingSaint = adminSaints.find((saint) => String(saint.id) === editingId);
+  const imageCount = images.reduce((count, image, index) => (
+    image || editingSaint?.[`image_${index + 1}_url`] ? count + 1 : count
+  ), 0);
 
   return (
     <div className="app-shell" data-theme={theme}>
@@ -342,11 +372,12 @@ function App() {
                   <div><p className="eyebrow">PANEL DE CONTENIDO</p><h2>{editingId ? "Editar santo" : "Agregar un santo"}</h2><p className="admin-welcome">Sesión: {currentAdmin?.name || currentAdmin?.email}</p></div>
                   <button className="button-quiet" onClick={logout}>Cerrar sesión</button>
                 </div>
+                {saintSaveError && <div className="form-error upload-error" role="alert"><strong>No se pudo guardar el santo</strong><span>{saintSaveError}</span></div>}
                 <label className="admin-selector">Editar un santo existente
                   <select value={editingId} onChange={(e) => {
                     const saint = adminSaints.find((item) => String(item.id) === e.target.value);
                     if (saint) startEditing(saint);
-                    else { setEditingId(""); setForm(emptyForm); setImages([null, null, null]); }
+                    else { setSaintSaveError(""); setEditingId(""); setForm(emptyForm); setImages([null, null, null]); }
                   }}>
                     <option value="">Crear un santo nuevo</option>
                     {adminSaints.map((saint) => <option key={saint.id} value={saint.id}>{saint.name}{saint.is_published ? "" : " (borrador)"}</option>)}
@@ -366,11 +397,25 @@ function App() {
                   <label>Etiquetas<input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="Ej. caridad, educación" /></label>
                   <label className="span-two">URL de YouTube<input type="url" value={form.youtube_url} onChange={(e) => setForm({ ...form, youtube_url: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." /></label>
                   {[0, 1, 2].map((index) => (
-                    <label key={index}>Imagen {index + 1}{!editingId && " *"}
-                      <input type="file" accept="image/jpeg,image/png,image/webp" required={!editingId && form.is_published} onChange={(e) => setImages(images.map((image, i) => i === index ? e.target.files?.[0] || null : image))} />
+                    <label key={index}>Imagen {index + 1} (opcional)
+                      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
+                        const nextImages = images.map((image, i) => i === index ? e.target.files?.[0] || null : image);
+                        setImages(nextImages);
+                        const count = nextImages.reduce((total, image, i) => (
+                          image || editingSaint?.[`image_${i + 1}_url`] ? total + 1 : total
+                        ), 0);
+                        setForm((previousForm) => ({
+                          ...previousForm,
+                          is_published: count < 3 ? false : previousForm.is_published
+                        }));
+                        setSaintSaveError("");
+                      }} />
                     </label>
                   ))}
-                  <label className="publish-option"><input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
+                  <p className="image-upload-help span-two">
+                    Imágenes seleccionadas: {imageCount} de 3. Puedes guardar con 1, 2 o 3; para publicar en el glosario se requieren las 3. Con menos de 3 se guardará como borrador.
+                  </p>
+                  <label className="publish-option"><input type="checkbox" checked={form.is_published} disabled={imageCount < 3} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} /> Publicar en el glosario</label>
                   <div className="form-actions span-two">
                     <button className="button-primary" type="submit" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Crear santo"}</button>
                     {editingId && <button className="button-quiet" type="button" onClick={() => { setEditingId(""); setForm(emptyForm); setImages([null, null, null]); }}>Cancelar edición</button>}
