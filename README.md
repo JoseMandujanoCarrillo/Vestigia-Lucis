@@ -20,7 +20,7 @@ La página se abre por defecto en `http://localhost:5173`; el API en `http://loc
 
 La cuenta principal puede crear otras cuentas administradoras desde el panel; esas cuentas no pueden crear más administradores. En producción, configura `SUPERADMIN_NAME`, `SUPERADMIN_EMAIL` y una contraseña nueva como variables privadas en Render y ejecuta `npm run db:init` y luego `npm run admin:create` desde el backend conectado a la base de datos. No uses la contraseña compartida anteriormente.
 
-La migración añade el nombre y rol de administradores y el historial de aportes. Cada creación o guardado de un santo cuenta como un aporte; los registros históricos conservan el creador original cuando existe. No necesitas reemplazar manualmente el esquema anterior: basta con ejecutar `npm run db:init`.
+La migración añade el nombre y rol de administradores y el historial de aportes. Cada creación o guardado de un santo cuenta como un aporte; los registros históricos conservan el creador original cuando existe. Para publicar un santo se requiere de una a tres imágenes, guardadas en las columnas existentes. En una base Neon ya creada, actualiza la restricción de publicación con el SQL de migración; `npm run db:init` no modifica restricciones existentes.
 
 ## API
 
@@ -36,4 +36,4 @@ La migración añade el nombre y rol de administradores y el historial de aporte
 - `GET /api/admin/admins`, `POST /api/admin/admins`, `PUT /api/admin/admins/:id` y `DELETE /api/admin/admins/:id`: gestión de cuentas, restringida a la cuenta principal.
 - `PUT /api/auth/password`: cambio de contraseña del administrador autenticado.
 
-Al crear un santo, envía de una a tres imágenes `image_1`, `image_2` e `image_3` como archivos JPG, PNG o WebP (máximo 5 MB cada uno). Sin modificar la base de datos, los santos con menos de tres imágenes se guardan como borradores, ya que el esquema actual exige tres imágenes para publicar. Se pueden ingresar milagros, uno por línea; para especificar título, usa `Título: descripción`. Las etiquetas se separan por comas.
+Al crear un santo, envía de una a tres imágenes `image_1`, `image_2` e `image_3` como archivos JPG, PNG o WebP (máximo 5 MB cada uno). La publicación se activa automáticamente al seleccionar una imagen; el esquema admite entre una y tres imágenes en las columnas existentes. Se pueden ingresar milagros, uno por línea; para especificar título, usa `Título: descripción`. Las etiquetas se separan por comas.
